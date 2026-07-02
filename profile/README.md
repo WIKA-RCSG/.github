@@ -4,7 +4,7 @@
 
 凿岩台车项目组专注于**地下工程凿岩台车（Rock Drilling Jumbo）**的软件开发与系统集成。台车是集钻孔、推进、导航、通信与控制于一体的工程装备，广泛应用于隧道开挖、矿山掘进等场景。
 
-本仓库 **RunTime** 是项目组的**主调度工程**：以 CMake 为核心，统一编排自研功能包与第三方依赖，支撑台车各子系统的模块化开发与联调验证。
+本仓库 **TeamDev** 是项目组的**主调度工程**：以 CMake 为核心，统一编排自研功能包与第三方依赖，支撑台车各子系统的模块化开发与联调验证。
 
 ---
 
@@ -94,8 +94,11 @@ RCS **网络通信库**，支持 TCP/UDP 等传输，用于设备间数据发布
 ```
 TeamDev/
 ├── CMakeLists.txt              # 主工程入口
-├── CMakePresets.json           # Debug / Release / vcpkg 预设
+├── CMakePresets.json           # Debug / Release / vcpkg 预设（VS Code & VS 共用）
 ├── vcpkg.json                  # 第三方库清单
+├── docs/
+│   ├── TeamDev-vscode-config/        # VS Code 配置说明（可独立为 Git 仓库）
+│   └── TeamDev-visualstudio-config/  # Visual Studio 配置说明（可独立为 Git 仓库）
 ├── config/
 │   └── packages.yaml           # 功能包清单（核心配置）
 ├── cmake/
@@ -114,21 +117,87 @@ TeamDev/
 
 ## 开发环境
 
-| 工具 | 说明 |
-|------|------|
-| 编译器 | llvm-mingw Clang（C++17） |
-| 构建 | CMake 3.20+，MinGW Makefiles |
-| IDE | VS Code / Cursor + CMake Tools |
-| 包管理 | vcpkg（`x64-mingw-dynamic` triplet） |
+### 通用工具链
 
-### 环境变量（参考）
+开发与构建前，请先安装以下工具（Windows 10/11）：
+
+| 工具 | 版本要求 | 说明 | 下载 |
+|------|----------|------|------|
+| [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) | Clang 17+ | C/C++ 编译器（`x86_64`） | [Releases](https://github.com/mstorsjo/llvm-mingw/releases) |
+| [CMake](https://cmake.org/) | ≥ 3.20 | 构建系统 | [下载页](https://cmake.org/download/) |
+| [vcpkg](https://github.com/microsoft/vcpkg) | 最新 | 第三方库（Boost、Eigen3、fmt） | [安装文档](https://learn.microsoft.com/zh-cn/vcpkg/get_started/get-started) |
+| [Git](https://git-scm.com/) | 最新 | 拉取功能包仓库 | [下载页](https://git-scm.com/download/win) |
+
+**vcpkg 常用 triplet**：`x64-mingw-dynamic`（与 llvm-mingw 配套）
+
+**环境变量（按本机路径修改）**：
 
 ```text
 VCPKG_ROOT=E:/Windows1/vcpkg
 VCPKG_DEFAULT_TRIPLET=x64-mingw-dynamic
+PATH=%PATH%;<llvm-mingw>/bin;<CMake>/bin
 ```
 
-路径请按本机实际安装位置修改。`.vscode` 为本地 IDE 配置，不纳入版本库。
+llvm-mingw 路径也可通过 CMake 缓存变量 `LLVM_MINGW_ROOT` 指定（见 [`cmake/toolchain-mingw.cmake`](cmake/toolchain-mingw.cmake)）。
+
+### CMake 预设
+
+项目使用 [`CMakePresets.json`](CMakePresets.json) 统一管理配置，两种 IDE 共用同一套预设：
+
+| 预设 | 用途 | 输出目录 |
+|------|------|----------|
+| `debug` | Debug + llvm-mingw 工具链 | `build/Debug` |
+| `release` | Release + llvm-mingw 工具链 | `build/Release` |
+| `debug-vcpkg` | Debug + vcpkg manifest 自动安装依赖 | `build/Debug-vcpkg` |
+| `release-vcpkg` | Release + vcpkg | `build/Release-vcpkg` |
+
+命令行示例：
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+```
+
+### IDE 配置仓库
+
+具体编辑器配置已拆分为两个独立说明仓库（可单独克隆，也可使用主工程 `docs/` 内副本）：
+
+| IDE | 仓库 | 本地文档 |
+|-----|------|----------|
+| **VS Code / Cursor** | [Auzerx/TeamDev-vscode-config](https://github.com/Auzerx/TeamDev-vscode-config) | [docs/TeamDev-vscode-config/README.md](docs/TeamDev-vscode-config/README.md) |
+| **Visual Studio 2022** | [Auzerx/TeamDev-visualstudio-config](https://github.com/Auzerx/TeamDev-visualstudio-config) | [docs/TeamDev-visualstudio-config/README.md](docs/TeamDev-visualstudio-config/README.md) |
+
+**VS Code 快速接入**：克隆配置仓库 → 将 `.vscode/` 复制到 TeamDev 根目录 → 修改 `settings.json` 中的 CMake / vcpkg 路径。
+
+**Visual Studio 快速接入**：设置系统环境变量 `VCPKG_ROOT` → 用 VS **打开文件夹** 选择 TeamDev → 工具栏选择 `debug` 预设 → 构建 `teamdev`。
+
+---
+
+### 方式一：VS Code / Cursor（摘要）
+
+- 配置模板：[TeamDev-vscode-config](https://github.com/Auzerx/TeamDev-vscode-config)（含 `settings.json` / `tasks.json` / `launch.json`）
+- 推荐扩展：CMake Tools、C/C++、clangd（可选）、CodeLLDB
+- 详细步骤见 → **[VS Code 配置说明](docs/TeamDev-vscode-config/README.md)**
+
+---
+
+### 方式二：Visual Studio（摘要）
+
+- 配置说明：[TeamDev-visualstudio-config](https://github.com/Auzerx/TeamDev-visualstudio-config)（含 `CMakeUserPresets.json` 本机覆盖模板）
+- 工作负载：桌面 C++ 开发 + CMake 工具
+- 详细步骤见 → **[Visual Studio 配置说明](docs/TeamDev-visualstudio-config/README.md)**
+
+---
+
+### 环境对照表
+
+| 配置项 | VS Code / Cursor | Visual Studio |
+|--------|------------------|---------------|
+| 详细文档 | [vscode-config 仓库](https://github.com/Auzerx/TeamDev-vscode-config) | [visualstudio-config 仓库](https://github.com/Auzerx/TeamDev-visualstudio-config) |
+| 预设文件 | [`CMakePresets.json`](CMakePresets.json) | 同左 |
+| 本地 IDE 配置 | `.vscode/`（从配置仓库复制） | `.vs/`（本地缓存） |
+| 本机路径覆盖 | `settings.json` 内环境变量 | `CMakeUserPresets.json`（可选） |
+| 调试 | CodeLLDB + `launch.json` | 内置调试器，启动项 `teamdev.exe` |
 
 ---
 
@@ -160,20 +229,31 @@ packages:
     target: Msg::msg
 ```
 
-### 3. 构建
+### 3. 构建与运行
 
-在 VS Code 状态栏选择 CMake 预设 **Debug** 或 **Debug + vcpkg**，保存 `CMakeLists.txt` 触发自动配置，然后构建目标 `teamdev`。
+任选一种 IDE（详细配置见下方链接）：
 
-命令行示例：
+| IDE | 配置仓库 |
+|-----|----------|
+| VS Code / Cursor | [TeamDev-vscode-config](https://github.com/Auzerx/TeamDev-vscode-config) · [本地文档](docs/TeamDev-vscode-config/README.md) |
+| Visual Studio | [TeamDev-visualstudio-config](https://github.com/Auzerx/TeamDev-visualstudio-config) · [本地文档](docs/TeamDev-visualstudio-config/README.md) |
+
+**VS Code / Cursor**
+
+1. 状态栏选择预设 **Debug** 或 **Debug + vcpkg**
+2. `Ctrl+Shift+B` 构建目标 `teamdev`
+3. F5 启动调试
+
+**Visual Studio**
+
+1. 工具栏选择配置预设 **Debug (仅 MinGW)**
+2. 启动项选择 `teamdev.exe` → **生成** → **开始调试**
+
+**命令行**（不依赖 IDE）：
 
 ```bash
 cmake --preset debug
 cmake --build build/Debug
-```
-
-### 4. 运行
-
-```bash
 ./build/Debug/teamdev.exe
 ```
 
@@ -210,6 +290,8 @@ cmake --build build/Debug
 
 | 仓库 | 说明 |
 |------|------|
+| [Auzerx/TeamDev-vscode-config](https://github.com/Auzerx/TeamDev-vscode-config) | VS Code / Cursor 工作区配置模板 |
+| [Auzerx/TeamDev-visualstudio-config](https://github.com/Auzerx/TeamDev-visualstudio-config) | Visual Studio CMake 开发说明 |
 | [Auzerx/Msg](https://github.com/Auzerx/Msg.git) | 消息与协议定义 |
 | [Auzerx/Utils](https://github.com/Auzerx/Utils.git) | 通用工具库 |
 | [Auzerx/RCS-Net](https://github.com/Auzerx/RCS-Net.git) | RCS 网络通信 |
